@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,6 +18,8 @@ type backup struct {
 	dest *string
 	alg *string
 	pwd *string
+	pwdFile *string
+	obfuscate *bool
 }
 
 func (b *backup) run() {
@@ -44,6 +47,39 @@ func (b *backup) run() {
 	enc := zip.AES256Encryption
 	if strings.EqualFold(*b.alg, "ZIP") {
 		enc = zip.StandardEncryption
+	}
+
+	if *b.pwdFile != "" {
+		p := filepath.Join(wd, *b.pwdFile)
+		data, err := ioutil.ReadFile(p)
+		if err != nil {
+			log.Fatalf("Unable to read password file: " + err.Error())
+		}
+		if *b.obfuscate {
+			// First try to decrypt
+			pwdData, err := encrypter.decrypt(data)
+			if err != nil {
+				// The file musn't be encrypted yet
+				pwd := string(data)
+				b.pwd = &pwd
+				// Encrypt the data
+				encrypted, err := encrypter.encrypt(data)
+				if err != nil {
+					log.Fatalf("Unable to encrypt password file: " + err.Error())
+				}
+				err = ioutil.WriteFile(p, encrypted, 0666)
+				if err != nil {
+					log.Fatalf("Unable to save encrypt password file: " + err.Error())
+				}
+			} else {
+				pwd := string(pwdData)
+				b.pwd = &pwd
+			}
+		} else {
+			pwd := string(data)
+			b.pwd = &pwd
+		}
+		
 	}
 
 	type file struct {
