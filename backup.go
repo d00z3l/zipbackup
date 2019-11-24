@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -22,19 +20,7 @@ type backup struct {
 }
 
 func (b *backup) run() {
-	if *b.pwd == "" {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Enter text: ")
-		p, err := reader.ReadString('\n')
-		if err != nil {
-			log.Fatalln(err)
-		}
-		if p == "" {
-			log.Fatalln("A password must be provided")
-		}
-		b.pwd = &p
-	}
-
+	
 	if *b.src == "" {
 		log.Fatalln("A source directory (-src) must be provided")
 	}
@@ -168,11 +154,21 @@ func (b *backup) zipFile(enc zip.EncryptionMethod, src, dest, pwd string) error 
 
 	zipw := zip.NewWriter(fzip)
 	defer zipw.Close()
-	w, err := zipw.Encrypt(filepath.Base(dest), pwd, enc)
-	if err != nil {
-		return err
+	if pwd == "" {
+		// If the password is blank don't encrypt
+		w, err := zipw.Create(filepath.Base(dest))
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(w, fsrc)
+	} else {
+		w, err := zipw.Encrypt(filepath.Base(dest), pwd, enc)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(w, fsrc)
 	}
-	_, err = io.Copy(w, fsrc)
+	
 	zipw.Flush()
 
 	return nil

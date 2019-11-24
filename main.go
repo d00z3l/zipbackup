@@ -10,7 +10,7 @@ func main() {
 
 	app := kingpin.New("zipbackup", "Backup using Zip encryption")
 	app.Version("0.0.1")
-	app.Author("D0z3l")
+	app.Author("D00z3l")
 	backupCmd := app.Command("backup", "Backup a directory")
 	backup := backup{
 		src: backupCmd.Arg("source", "The source directory to backup").Required().String(),
